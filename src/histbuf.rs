@@ -325,11 +325,21 @@ impl<'a, T, const N: usize> Iterator for OldestOrdered<'a, T, N> {
     fn next(&mut self) -> Option<&'a T> {
         self.idxs.next().and_then(|n| self.buf.nth_oldest(n))
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.len(), Some(self.len()))
+    }
 }
 
 impl<'a, T, const N: usize> DoubleEndedIterator for OldestOrdered<'a, T, N> {
     fn next_back(&mut self) -> Option<&'a T> {
         self.idxs.next_back().and_then(|n| self.buf.nth_oldest(n))
+    }
+}
+
+impl<'a, T, const N: usize> ExactSizeIterator for OldestOrdered<'a, T, N> {
+    fn len(&self) -> usize {
+        self.idxs.len()
     }
 }
 
@@ -438,6 +448,7 @@ mod tests {
         // test on an empty buffer
         let buffer: HistoryBuffer<u8, 6> = HistoryBuffer::new();
         let mut iter = buffer.oldest_ordered();
+        assert_eq!(iter.len(), 0);
         assert_eq!(iter.next(), None);
         assert_eq!(iter.next(), None);
         assert_eq!(iter.next_back(), None);
@@ -450,6 +461,7 @@ mod tests {
         let mut buffer: HistoryBuffer<u8, 6> = HistoryBuffer::new();
         buffer.extend([1, 2, 3]);
         assert_eq!(buffer.len(), 3);
+        assert_eq!(buffer.oldest_ordered().len(), 3);
         assert_eq_iter(buffer.oldest_ordered(), &[1, 2, 3]);
         assert_eq_iter_rev(buffer.oldest_ordered(), &[3, 2, 1]);
     }
@@ -460,6 +472,7 @@ mod tests {
         let mut buffer: HistoryBuffer<u8, 6> = HistoryBuffer::new();
         buffer.extend([0, 0, 0, 1, 2, 3, 4, 5, 6]);
         assert_eq!(buffer.len(), 6);
+        assert_eq!(buffer.oldest_ordered().len(), 6);
         assert_eq_iter(buffer.oldest_ordered(), &[1, 2, 3, 4, 5, 6]);
         assert_eq_iter_rev(buffer.oldest_ordered(), &[6, 5, 4, 3, 2, 1]);
     }
@@ -472,6 +485,7 @@ mod tests {
             let mut buffer: HistoryBuffer<u8, N> = HistoryBuffer::new();
             buffer.extend(0..n);
             let range = n.saturating_sub(N as u8)..n;
+            assert_eq!(buffer.oldest_ordered().len(), buffer.len());
             assert_eq_iter(buffer.oldest_ordered().copied(), range.clone());
             assert_eq_iter_rev(buffer.oldest_ordered().copied(), range.rev());
         }
