@@ -110,7 +110,7 @@ where
 impl<T, const N: usize> HistoryBuffer<T, N> {
     /// Returns the current fill level of the buffer.
     #[inline]
-    pub fn len(&self) -> usize {
+    pub const fn len(&self) -> usize {
         if self.filled {
             N
         } else {
@@ -121,7 +121,7 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     /// Returns the capacity of the buffer, which is the length of the
     /// underlying backing array.
     #[inline]
-    pub fn capacity(&self) -> usize {
+    pub const fn capacity(&self) -> usize {
         N
     }
 
@@ -165,7 +165,7 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     /// x.write(10);
     /// assert_eq!(x.recent(), Some(&10));
     /// ```
-    pub fn recent(&self) -> Option<&T> {
+    pub const fn recent(&self) -> Option<&T> {
         if self.write_at == 0 {
             if self.filled {
                 Some(unsafe { &*self.data[self.capacity() - 1].as_ptr() })
@@ -197,7 +197,7 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     /// assert_eq!(x.nth_oldest(1), Some(&10));
     /// assert_eq!(x.nth_oldest(2), None);
     /// ```
-    pub fn nth_oldest(&self, mut n: usize) -> Option<&T> {
+    pub const fn nth_oldest(&self, mut n: usize) -> Option<&T> {
         if n >= self.len() {
             return None;
         }
@@ -217,7 +217,7 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
             return None; // Buffer is empty
         }
 
-        Some(&self[n])
+        Some(unsafe { &*self.data[n].as_ptr() })
     }
 
     /// Returns the array slice backing the buffer, without keeping track
@@ -240,7 +240,7 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     ///     assert_eq!(x, y)
     /// }
     /// ```
-    pub fn oldest_ordered<'a>(&'a self) -> OldestOrdered<'a, T, N> {
+    pub const fn oldest_ordered<'a>(&'a self) -> OldestOrdered<'a, T, N> {
         OldestOrdered {
             buf: self,
             idxs: 0..self.len(),
