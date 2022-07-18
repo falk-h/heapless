@@ -377,25 +377,34 @@ mod tests {
     }
 
     #[test]
-    fn ordered() {
+    fn ordered_empty() {
         // test on an empty buffer
         let buffer: HistoryBuffer<u8, 6> = HistoryBuffer::new();
         let mut iter = buffer.oldest_ordered();
         assert_eq!(iter.next(), None);
         assert_eq!(iter.next(), None);
+    }
 
+    #[test]
+    fn ordered_non_filled() {
         // test on a un-filled buffer
         let mut buffer: HistoryBuffer<u8, 6> = HistoryBuffer::new();
         buffer.extend([1, 2, 3]);
         assert_eq!(buffer.len(), 3);
         assert_eq_iter(buffer.oldest_ordered(), &[1, 2, 3]);
+    }
 
+    #[test]
+    fn ordered_filled() {
         // test on a filled buffer
         let mut buffer: HistoryBuffer<u8, 6> = HistoryBuffer::new();
         buffer.extend([0, 0, 0, 1, 2, 3, 4, 5, 6]);
         assert_eq!(buffer.len(), 6);
         assert_eq_iter(buffer.oldest_ordered(), &[1, 2, 3, 4, 5, 6]);
+    }
 
+    #[test]
+    fn ordered_comprehensive() {
         // comprehensive test all cases
         for n in 0..50 {
             const N: usize = 7;
