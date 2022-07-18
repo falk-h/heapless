@@ -440,6 +440,8 @@ mod tests {
         let mut iter = buffer.oldest_ordered();
         assert_eq!(iter.next(), None);
         assert_eq!(iter.next(), None);
+        assert_eq!(iter.next_back(), None);
+        assert_eq!(iter.next_back(), None);
     }
 
     #[test]
@@ -449,6 +451,7 @@ mod tests {
         buffer.extend([1, 2, 3]);
         assert_eq!(buffer.len(), 3);
         assert_eq_iter(buffer.oldest_ordered(), &[1, 2, 3]);
+        assert_eq_iter_rev(buffer.oldest_ordered(), &[3, 2, 1]);
     }
 
     #[test]
@@ -458,6 +461,7 @@ mod tests {
         buffer.extend([0, 0, 0, 1, 2, 3, 4, 5, 6]);
         assert_eq!(buffer.len(), 6);
         assert_eq_iter(buffer.oldest_ordered(), &[1, 2, 3, 4, 5, 6]);
+        assert_eq_iter_rev(buffer.oldest_ordered(), &[6, 5, 4, 3, 2, 1]);
     }
 
     #[test]
@@ -467,10 +471,9 @@ mod tests {
             const N: usize = 7;
             let mut buffer: HistoryBuffer<u8, N> = HistoryBuffer::new();
             buffer.extend(0..n);
-            assert_eq_iter(
-                buffer.oldest_ordered().copied(),
-                n.saturating_sub(N as u8)..n,
-            );
+            let range = n.saturating_sub(N as u8)..n;
+            assert_eq_iter(buffer.oldest_ordered().copied(), range.clone());
+            assert_eq_iter_rev(buffer.oldest_ordered().copied(), range.rev());
         }
     }
 
@@ -485,6 +488,32 @@ mod tests {
         let mut i = 0;
         loop {
             let a_item = a.next();
+            let b_item = b.next();
+
+            assert_eq!(a_item, b_item, "{}", i);
+
+            i += 1;
+
+            if b_item.is_none() {
+                break;
+            }
+        }
+    }
+
+    /// Compares two double ended iterators item by item in reverse, making sure
+    /// they stop at the same time.
+    fn assert_eq_iter_rev<A, B, I: Eq + Debug>(a: A, b: B)
+    where
+        A: IntoIterator<Item = I>,
+        B: IntoIterator<Item = I>,
+        <A as IntoIterator>::IntoIter: DoubleEndedIterator,
+    {
+        let mut a = a.into_iter();
+        let mut b = b.into_iter();
+
+        let mut i = 0;
+        loop {
+            let a_item = a.next_back();
             let b_item = b.next();
 
             assert_eq!(a_item, b_item, "{}", i);
