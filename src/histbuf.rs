@@ -1,4 +1,5 @@
 use core::fmt;
+use core::iter::FusedIterator;
 use core::mem::MaybeUninit;
 use core::ops::Deref;
 use core::ptr;
@@ -305,6 +306,8 @@ impl<'a, T, const N: usize> Iterator for OldestOrdered<'a, T, N> {
         Some(item)
     }
 }
+
+impl<'a, T, const N: usize> FusedIterator for OldestOrdered<'a, T, N> {}
 
 #[cfg(test)]
 mod tests {
