@@ -142,8 +142,8 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
 
     /// Clones and writes all elements in a slice to the buffer.
     ///
-    /// If the slice is longer than the buffer, only the last `self.len()`
-    /// elements will actually be stored.
+    /// If the slice is longer than the buffer, only the last
+    /// [`self.len`](HistoryBuffer#method.len) elements will actually be stored.
     pub fn extend_from_slice(&mut self, other: &[T])
     where
         T: Clone,
@@ -183,7 +183,7 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     ///
     /// This is intended for reading specific values from the buffer. If you
     /// just want to iterate over *all* of the values in the buffer, use
-    /// `oldest_ordered()`.
+    /// [`oldest_ordered`](HistoryBuffer#method.oldest_ordered).
     ///
     /// # Examples
     ///
@@ -225,8 +225,9 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     /// If no values have been written to the buffer, returns `None`.
     ///
     /// This is intended to be used for low-level access to the buffer contents
-    /// together with `as_slice()`. If you just want to iterate over the values
-    /// in the buffer, use `oldest_ordered()`.
+    /// together with [`as_slice`](HistoryBuffer#method.as_slice). If you just
+    /// want to iterate over the values in the buffer, use
+    /// [`oldest_ordered`](HistoryBuffer#method.oldest_ordered).
     ///
     /// # Examples
     ///
