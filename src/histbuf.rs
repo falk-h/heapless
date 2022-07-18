@@ -195,7 +195,6 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     /// for (x, y) in buffer.oldest_ordered().zip(expected.iter()) {
     ///     assert_eq!(x, y)
     /// }
-    ///
     /// ```
     pub fn oldest_ordered<'a>(&'a self) -> OldestOrdered<'a, T, N> {
         if self.filled {
