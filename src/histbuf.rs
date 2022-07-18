@@ -220,6 +220,40 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
         Some(unsafe { &*self.data[n].as_ptr() })
     }
 
+    /// Returns the index of the oldest value in the buffer.
+    ///
+    /// If no values have been written to the buffer, returns `None`.
+    ///
+    /// This is intended to be used for low-level access to the buffer contents
+    /// together with `as_slice()`. If you just want to iterate over the values
+    /// in the buffer, use `oldest_ordered()`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::HistoryBuffer;
+    ///
+    /// let mut buf: HistoryBuffer<u8, 10> = HistoryBuffer::new();
+    /// assert_eq!(buf.oldest_index(), None);
+    /// buf.write(0);
+    /// assert_eq!(buf.oldest_index(), Some(0));
+    /// buf.write(1);
+    /// assert_eq!(buf.oldest_index(), Some(0));
+    /// buf.extend_from_slice(&[2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+    /// assert_eq!(buf.oldest_index(), Some(2));
+    /// ```
+    pub const fn oldest_index(&self) -> Option<usize> {
+        if !self.filled {
+            if self.write_at == 0 {
+                None
+            } else {
+                Some(0)
+            }
+        } else {
+            Some(self.write_at)
+        }
+    }
+
     /// Returns the array slice backing the buffer, without keeping track
     /// of the write position. Therefore, the element order is unspecified.
     pub fn as_slice(&self) -> &[T] {
@@ -389,18 +423,21 @@ mod tests {
     }
 
     #[test]
-    fn recent() {
+    fn recent_and_oldest() {
         let mut x: HistoryBuffer<u8, 4> = HistoryBuffer::new();
         assert_eq!(x.recent(), None);
+        assert_eq!(x.oldest_index(), None);
 
         x.write(1);
         x.write(4);
         assert_eq!(x.recent(), Some(&4));
+        assert_eq!(x.oldest_index(), Some(0));
 
         x.write(5);
         x.write(6);
         x.write(10);
         assert_eq!(x.recent(), Some(&10));
+        assert_eq!(x.oldest_index(), Some(1));
     }
 
     #[test]
