@@ -45,6 +45,7 @@
 //!
 //! - [`Arc`](pool/singleton/arc/struct.Arc.html) -- Thread-safe reference-counting pointer backed by a memory pool
 //! - [`BinaryHeap`](binary_heap/struct.BinaryHeap.html) -- priority queue
+//! - [`HistoryBuffer`](struct.HistoryBuffer.html) -- ring buffer
 //! - [`IndexMap`](struct.IndexMap.html) -- hash table
 //! - [`IndexSet`](struct.IndexSet.html) -- hash set
 //! - [`LinearMap`](struct.LinearMap.html)
