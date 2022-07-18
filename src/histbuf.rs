@@ -166,9 +166,10 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     /// assert_eq!(x.recent(), Some(&10));
     /// ```
     pub const fn recent(&self) -> Option<&T> {
-        match self.most_recent_index() {
-            Some(i) => Some(unsafe { &*self.data[i].as_ptr() }),
-            None => None,
+        if self.len() != 0 {
+            self.nth_oldest(self.len() - 1)
+        } else {
+            None
         }
     }
 
@@ -197,14 +198,10 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     /// assert_eq!(buf.most_recent_index(), Some(1));
     /// ```
     pub const fn most_recent_index(&self) -> Option<usize> {
-        if self.write_at == 0 {
-            if self.filled {
-                Some(self.capacity() - 1)
-            } else {
-                None
-            }
+        if self.len() != 0 {
+            self.nth_oldest_index(self.len() - 1)
         } else {
-            Some(self.write_at - 1)
+            None
         }
     }
 
@@ -244,27 +241,11 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     /// assert_eq!(x.nth_oldest(1), Some(&10));
     /// assert_eq!(x.nth_oldest(2), None);
     /// ```
-    pub const fn nth_oldest(&self, mut n: usize) -> Option<&T> {
-        if n >= self.len() {
-            return None;
+    pub const fn nth_oldest(&self, n: usize) -> Option<&T> {
+        match self.nth_oldest_index(n) {
+            Some(i) => Some(unsafe { &*self.data[i].as_ptr() }),
+            None => None,
         }
-
-        if self.filled {
-            let (sum, overflowed) = n.overflowing_add(self.write_at);
-            n = sum;
-
-            if n >= self.len() {
-                n -= self.len();
-            }
-
-            if overflowed {
-                n += usize::MAX - self.len() + 1;
-            }
-        } else if self.write_at == 0 {
-            return None; // Buffer is empty
-        }
-
-        Some(unsafe { &*self.data[n].as_ptr() })
     }
 
     /// Returns the index of the oldest value in the buffer.
@@ -293,15 +274,7 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     /// assert_eq!(buf.oldest_index(), Some(2));
     /// ```
     pub const fn oldest_index(&self) -> Option<usize> {
-        if !self.filled {
-            if self.write_at == 0 {
-                None
-            } else {
-                Some(0)
-            }
-        } else {
-            Some(self.write_at)
-        }
+        self.nth_oldest_index(0)
     }
 
     /// Returns the index of the `n`th oldest value in the buffer.
