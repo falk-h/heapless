@@ -347,7 +347,10 @@ impl<T, const N: usize> Default for HistoryBuffer<T, N> {
     }
 }
 
-/// An iterator on the underlying buffer ordered from oldest data to newest
+/// An iterator on the underlying buffer ordered from oldest data to newest.
+///
+/// Created by
+/// [`HistoryBuffer.oldest_ordered`](HistoryBuffer#method.oldest_ordered).
 #[derive(Clone)]
 pub struct OldestOrdered<'a, T, const N: usize> {
     buf: &'a HistoryBuffer<T, N>,
