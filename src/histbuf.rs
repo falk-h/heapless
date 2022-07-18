@@ -304,6 +304,57 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
         }
     }
 
+    /// Returns the index of the `n`th oldest value in the buffer.
+    ///
+    /// If no values have been written to the buffer, returns `None`.
+    ///
+    /// This is intended to be used for low-level access to the buffer contents
+    /// together with [`as_slice`](HistoryBuffer#method.as_slice). If you just
+    /// want to iterate over the values in the buffer, use
+    /// [`oldest_ordered`](HistoryBuffer#method.oldest_ordered).
+    ///
+    /// See also the utility methods [`oldest`](HistoryBuffer#method.oldest) and
+    /// [`oldest_index`](HistoryBuffer#method.oldest_index), and
+    /// [`most_recent_index`](HistoryBuffer#method.most_recent_index).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::HistoryBuffer;
+    ///
+    /// let mut buf: HistoryBuffer<u8, 10> = HistoryBuffer::new();
+    /// assert_eq!(buf.nth_oldest_index(0), None);
+    /// buf.write(0);
+    /// buf.write(1);
+    /// assert_eq!(buf.nth_oldest_index(0), Some(0));
+    /// assert_eq!(buf.nth_oldest_index(1), Some(1));
+    /// buf.extend_from_slice(&[2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+    /// assert_eq!(buf.nth_oldest_index(0), Some(2));
+    /// assert_eq!(buf.nth_oldest_index(1), Some(3));
+    /// ```
+    pub const fn nth_oldest_index(&self, mut n: usize) -> Option<usize> {
+        if n >= self.len() {
+            return None;
+        }
+
+        if self.filled {
+            let (sum, overflowed) = n.overflowing_add(self.write_at);
+            n = sum;
+
+            if n >= self.len() {
+                n -= self.len();
+            }
+
+            if overflowed {
+                n += usize::MAX - self.len() + 1;
+            }
+        } else if self.write_at == 0 {
+            return None; // Buffer is empty
+        }
+
+        Some(n)
+    }
+
     /// Returns the array slice backing the buffer, without keeping track
     /// of the write position. Therefore, the element order is unspecified.
     pub fn as_slice(&self) -> &[T] {
