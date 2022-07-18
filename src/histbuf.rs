@@ -177,6 +177,22 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
         }
     }
 
+    /// Returns a reference to the oldest value.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::HistoryBuffer;
+    ///
+    /// let mut x: HistoryBuffer<u8, 16> = HistoryBuffer::new();
+    /// x.write(4);
+    /// x.write(10);
+    /// assert_eq!(x.oldest(), Some(&4));
+    /// ```
+    pub const fn oldest(&self) -> Option<&T> {
+        self.nth_oldest(0)
+    }
+
     /// Returns a reference to the `n`th oldest value in the buffer.
     ///
     /// Returns `None` when `n >= N`.
@@ -431,17 +447,20 @@ mod tests {
         let mut x: HistoryBuffer<u8, 4> = HistoryBuffer::new();
         assert_eq!(x.recent(), None);
         assert_eq!(x.oldest_index(), None);
+        assert_eq!(x.oldest(), None);
 
         x.write(1);
         x.write(4);
         assert_eq!(x.recent(), Some(&4));
         assert_eq!(x.oldest_index(), Some(0));
+        assert_eq!(x.oldest(), Some(&1));
 
         x.write(5);
         x.write(6);
         x.write(10);
         assert_eq!(x.recent(), Some(&10));
         assert_eq!(x.oldest_index(), Some(1));
+        assert_eq!(x.oldest(), Some(&4));
     }
 
     #[test]
