@@ -1,7 +1,7 @@
 use core::fmt;
 use core::iter::FusedIterator;
 use core::mem::MaybeUninit;
-use core::ops::Deref;
+use core::ops::{Deref, Range};
 use core::ptr;
 use core::slice;
 
@@ -241,19 +241,9 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     /// }
     /// ```
     pub fn oldest_ordered<'a>(&'a self) -> OldestOrdered<'a, T, N> {
-        if self.filled {
-            OldestOrdered {
-                buf: self,
-                cur: self.write_at,
-                wrapped: false,
-            }
-        } else {
-            // special case: act like we wrapped already to handle empty buffer.
-            OldestOrdered {
-                buf: self,
-                cur: 0,
-                wrapped: true,
-            }
+        OldestOrdered {
+            buf: self,
+            idxs: 0..self.len(),
         }
     }
 }
@@ -326,27 +316,20 @@ impl<T, const N: usize> Default for HistoryBuffer<T, N> {
 #[derive(Clone)]
 pub struct OldestOrdered<'a, T, const N: usize> {
     buf: &'a HistoryBuffer<T, N>,
-    cur: usize,
-    wrapped: bool,
+    idxs: Range<usize>,
 }
 
 impl<'a, T, const N: usize> Iterator for OldestOrdered<'a, T, N> {
     type Item = &'a T;
 
     fn next(&mut self) -> Option<&'a T> {
-        if self.cur == self.buf.len() && self.buf.filled {
-            // roll-over
-            self.cur = 0;
-            self.wrapped = true;
-        }
+        self.idxs.next().and_then(|n| self.buf.nth_oldest(n))
+    }
+}
 
-        if self.cur == self.buf.write_at && self.wrapped {
-            return None;
-        }
-
-        let item = &self.buf[self.cur];
-        self.cur += 1;
-        Some(item)
+impl<'a, T, const N: usize> DoubleEndedIterator for OldestOrdered<'a, T, N> {
+    fn next_back(&mut self) -> Option<&'a T> {
+        self.idxs.next_back().and_then(|n| self.buf.nth_oldest(n))
     }
 }
 
