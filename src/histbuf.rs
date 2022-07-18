@@ -177,6 +177,49 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
         }
     }
 
+    /// Returns a reference to the `n`th oldest value in the buffer.
+    ///
+    /// Returns `None` when `n >= N`.
+    ///
+    /// This is intended for reading specific values from the buffer. If you
+    /// just want to iterate over *all* of the values in the buffer, use
+    /// `oldest_ordered()`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::HistoryBuffer;
+    ///
+    /// let mut x: HistoryBuffer<u8, 16> = HistoryBuffer::new();
+    /// x.write(4);
+    /// x.write(10);
+    /// assert_eq!(x.nth_oldest(0), Some(&4));
+    /// assert_eq!(x.nth_oldest(1), Some(&10));
+    /// assert_eq!(x.nth_oldest(2), None);
+    /// ```
+    pub fn nth_oldest(&self, mut n: usize) -> Option<&T> {
+        if n >= self.len() {
+            return None;
+        }
+
+        if self.filled {
+            let (sum, overflowed) = n.overflowing_add(self.write_at);
+            n = sum;
+
+            if n >= self.len() {
+                n -= self.len();
+            }
+
+            if overflowed {
+                n += usize::MAX - self.len() + 1;
+            }
+        } else if self.write_at == 0 {
+            return None; // Buffer is empty
+        }
+
+        Some(&self[n])
+    }
+
     /// Returns the array slice backing the buffer, without keeping track
     /// of the write position. Therefore, the element order is unspecified.
     pub fn as_slice(&self) -> &[T] {
@@ -365,6 +408,35 @@ mod tests {
         x.write(6);
         x.write(10);
         assert_eq!(x.recent(), Some(&10));
+    }
+
+    #[test]
+    fn nth_oldest() {
+        let mut x: HistoryBuffer<u8, 4> = HistoryBuffer::new();
+        assert_eq!(x.nth_oldest(0), None);
+        assert_eq!(x.nth_oldest(1), None);
+        assert_eq!(x.nth_oldest(2), None);
+        assert_eq!(x.nth_oldest(3), None);
+        assert_eq!(x.nth_oldest(4), None);
+
+        x.write(1);
+        x.write(4);
+
+        assert_eq!(x.nth_oldest(0), Some(&1));
+        assert_eq!(x.nth_oldest(1), Some(&4));
+        assert_eq!(x.nth_oldest(2), None);
+        assert_eq!(x.nth_oldest(3), None);
+        assert_eq!(x.nth_oldest(4), None);
+
+        x.write(5);
+        x.write(6);
+        x.write(10);
+
+        assert_eq!(x.nth_oldest(0), Some(&4));
+        assert_eq!(x.nth_oldest(1), Some(&5));
+        assert_eq!(x.nth_oldest(2), Some(&6));
+        assert_eq!(x.nth_oldest(3), Some(&10));
+        assert_eq!(x.nth_oldest(4), None);
     }
 
     #[test]
