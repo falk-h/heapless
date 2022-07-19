@@ -161,6 +161,7 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     /// use heapless::HistoryBuffer;
     ///
     /// let mut x: HistoryBuffer<u8, 16> = HistoryBuffer::new();
+    /// assert_eq!(x.recent(), None);
     /// x.write(4);
     /// x.write(10);
     /// assert_eq!(x.recent(), Some(&10));
@@ -273,6 +274,7 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     /// use heapless::HistoryBuffer;
     ///
     /// let mut x: HistoryBuffer<u8, 16> = HistoryBuffer::new();
+    /// assert_eq!(x.oldest(), None);
     /// x.write(4);
     /// x.write(10);
     /// assert_eq!(x.oldest(), Some(&4));
