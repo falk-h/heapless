@@ -166,11 +166,7 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     /// assert_eq!(x.recent(), Some(&10));
     /// ```
     pub const fn recent(&self) -> Option<&T> {
-        if self.len() != 0 {
-            self.nth_oldest(self.len() - 1)
-        } else {
-            None
-        }
+        self.nth_most_recent(0)
     }
 
     /// Returns the index of the most recently written value.
@@ -183,7 +179,10 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     /// [`oldest_ordered`](HistoryBuffer#method.oldest_ordered), possibly along
     /// with [`rev`](Iterator#method.rev).
     ///
-    /// See also [`oldest_index`](HistoryBuffer#method.oldest_index).
+    /// See also [`recent`](HistoryBuffer#method.recent) for getting the value
+    /// directly, the more general
+    /// [`nth_most_recent_index`](HistoryBuffer#method.nth_most_recent_index),
+    /// and [`oldest_index`](HistoryBuffer#method.oldest_index).
     ///
     /// # Examples
     ///
@@ -198,8 +197,69 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     /// assert_eq!(buf.most_recent_index(), Some(1));
     /// ```
     pub const fn most_recent_index(&self) -> Option<usize> {
-        if self.len() != 0 {
-            self.nth_oldest_index(self.len() - 1)
+        self.nth_most_recent_index(0)
+    }
+
+    /// Returns a reference to the `n`th oldest value in the buffer.
+    ///
+    /// Returns `None` when `n >= N`.
+    ///
+    /// This is intended for reading specific values from the buffer. If you
+    /// just want to iterate over *all* of the values in the buffer, use
+    /// [`oldest_ordered`](HistoryBuffer#method.oldest_ordered), possibly along
+    /// with [`rev`](Iterator#method.rev).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::HistoryBuffer;
+    ///
+    /// let mut x: HistoryBuffer<u8, 16> = HistoryBuffer::new();
+    /// x.write(4);
+    /// x.write(10);
+    /// assert_eq!(x.nth_most_recent(0), Some(&10));
+    /// assert_eq!(x.nth_most_recent(1), Some(&4));
+    /// assert_eq!(x.nth_most_recent(2), None);
+    /// ```
+    pub const fn nth_most_recent(&self, n: usize) -> Option<&T> {
+        match self.nth_most_recent_index(n) {
+            Some(i) => Some(unsafe { &*self.data[i].as_ptr() }),
+            None => None,
+        }
+    }
+
+    /// Returns the index of the `n`th newest value in the buffer.
+    ///
+    /// If no values have been written to the buffer, returns `None`.
+    ///
+    /// This is intended to be used for low-level access to the buffer contents
+    /// together with [`as_slice`](HistoryBuffer#method.as_slice). If you just
+    /// want to iterate over the values in the buffer, use
+    /// [`oldest_ordered`](HistoryBuffer#method.oldest_ordered).
+    ///
+    /// See also the utility methods [`recent`](HistoryBuffer#method.recent) and
+    /// [`most_recent_index`](HistoryBuffer#method.most_recent_index), and
+    /// [`oldest_index`](HistoryBuffer#method.most_recent_index), possibly along
+    /// with [`rev`](Iterator#method.rev).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::HistoryBuffer;
+    ///
+    /// let mut buf: HistoryBuffer<u8, 10> = HistoryBuffer::new();
+    /// assert_eq!(buf.nth_most_recent_index(0), None);
+    /// buf.write(0);
+    /// buf.write(1);
+    /// assert_eq!(buf.nth_most_recent_index(0), Some(1));
+    /// assert_eq!(buf.nth_most_recent_index(1), Some(0));
+    /// buf.extend_from_slice(&[2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    /// assert_eq!(buf.nth_most_recent_index(0), Some(0));
+    /// assert_eq!(buf.nth_most_recent_index(1), Some(9));
+    /// ```
+    pub const fn nth_most_recent_index(&self, n: usize) -> Option<usize> {
+        if self.len() != 0 && n < self.len() {
+            self.nth_oldest_index(self.len() - n - 1)
         } else {
             None
         }
@@ -257,7 +317,10 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     /// want to iterate over the values in the buffer, use
     /// [`oldest_ordered`](HistoryBuffer#method.oldest_ordered).
     ///
-    /// See also [`most_recent_index`](HistoryBuffer#method.most_recent_index).
+    /// See also [`oldest`](HistoryBuffer#method.oldest) for getting
+    /// the value directly, the more general
+    /// [`nth_oldest_index`](HistoryBuffer#method.nth_oldest_index), and
+    /// [`most_recent_index`](HistoryBuffer#method.most_recent_index).
     ///
     /// # Examples
     ///
@@ -504,33 +567,39 @@ mod tests {
         let mut x: HistoryBuffer<u8, 4> = HistoryBuffer::new();
         assert_eq!(x.recent(), None);
         assert_eq!(x.most_recent_index(), None);
-        assert_eq!(x.oldest_index(), None);
         assert_eq!(x.oldest(), None);
+        assert_eq!(x.oldest_index(), None);
 
         x.write(1);
         x.write(4);
         assert_eq!(x.recent(), Some(&4));
         assert_eq!(x.most_recent_index(), Some(1));
-        assert_eq!(x.oldest_index(), Some(0));
         assert_eq!(x.oldest(), Some(&1));
+        assert_eq!(x.oldest_index(), Some(0));
 
         x.write(5);
         x.write(6);
         x.write(10);
         assert_eq!(x.recent(), Some(&10));
         assert_eq!(x.most_recent_index(), Some(0));
-        assert_eq!(x.oldest_index(), Some(1));
         assert_eq!(x.oldest(), Some(&4));
+        assert_eq!(x.oldest_index(), Some(1));
     }
 
     #[test]
-    fn nth_oldest() {
+    fn nth_most_recent_and_nth_oldest() {
         let mut x: HistoryBuffer<u8, 4> = HistoryBuffer::new();
         assert_eq!(x.nth_oldest(0), None);
         assert_eq!(x.nth_oldest(1), None);
         assert_eq!(x.nth_oldest(2), None);
         assert_eq!(x.nth_oldest(3), None);
         assert_eq!(x.nth_oldest(4), None);
+
+        assert_eq!(x.nth_most_recent(0), None);
+        assert_eq!(x.nth_most_recent(1), None);
+        assert_eq!(x.nth_most_recent(2), None);
+        assert_eq!(x.nth_most_recent(3), None);
+        assert_eq!(x.nth_most_recent(4), None);
 
         x.write(1);
         x.write(4);
@@ -541,6 +610,12 @@ mod tests {
         assert_eq!(x.nth_oldest(3), None);
         assert_eq!(x.nth_oldest(4), None);
 
+        assert_eq!(x.nth_most_recent(0), Some(&4));
+        assert_eq!(x.nth_most_recent(1), Some(&1));
+        assert_eq!(x.nth_most_recent(2), None);
+        assert_eq!(x.nth_most_recent(3), None);
+        assert_eq!(x.nth_most_recent(4), None);
+
         x.write(5);
         x.write(6);
         x.write(10);
@@ -550,6 +625,12 @@ mod tests {
         assert_eq!(x.nth_oldest(2), Some(&6));
         assert_eq!(x.nth_oldest(3), Some(&10));
         assert_eq!(x.nth_oldest(4), None);
+
+        assert_eq!(x.nth_most_recent(0), Some(&10));
+        assert_eq!(x.nth_most_recent(1), Some(&6));
+        assert_eq!(x.nth_most_recent(2), Some(&5));
+        assert_eq!(x.nth_most_recent(3), Some(&4));
+        assert_eq!(x.nth_most_recent(4), None);
     }
 
     #[test]
